@@ -73,16 +73,16 @@ fi
 # ==========================================
 echo -e "\n${BLUE}[2/2] Stowing dotfiles...${NC}"
 
-cd "$DOTFILES_DIR"
-
-# Using */ stows all top-level package directories inside ~/dotfiles
-if stow -t ~ */ ; then
+# Treat the dotfiles directory itself as the package using '.'
+if stow -d "$DOTFILES_DIR" -t ~ .; then
     echo -e "${GREEN}✅ Dotfiles stowed successfully${NC}"
     echo -e "${BLUE}========================================${NC}"
     echo -e "${GREEN}✅ Dotfiles setup complete!${NC}"
     echo -e "${BLUE}========================================${NC}"
 else
     echo -e "${RED}❌ Failed to stow dotfiles${NC}"
-    echo -e "Check for conflicts. If a file already exists, use 'stow --adopt */'"
+    echo -e "${YELLOW}Fixing Conflicts:${NC} If Stow says a file already exists (like ~/.zshrc),"
+    echo -e "you must delete the existing file first, or run:"
+    echo -e "  stow --adopt -d \"$DOTFILES_DIR\" -t ~ ."
     exit 1
 fi
