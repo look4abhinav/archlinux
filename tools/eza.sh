@@ -21,7 +21,7 @@ echo -e "${BLUE}========================================${NC}"
 echo -e "\n${BLUE}Verifying eza installation...${NC}"
 
 if command -v eza &> /dev/null; then
-    EZA_PATH=$(which eza)
+    EZA_PATH=$(command -v eza)
     EZA_VER=$(eza --version)
     echo -e "${GREEN}✅ Eza found at: $EZA_PATH${NC}"
     echo -e "${GREEN}✅ $EZA_VER${NC}"

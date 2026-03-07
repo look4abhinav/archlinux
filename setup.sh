@@ -78,14 +78,14 @@ echo -e "${BLUE}========================================${NC}"
 # ==========================================
 # STEP 1: SYSTEM UPDATE
 # ==========================================
-echo -e "\n${BLUE}[1/5] Updating system packages...${NC}"
+echo -e "\n${BLUE}[1/4] Updating system packages...${NC}"
 print_status "Syncing and updating pacman..."
 sudo pacman -Syu --noconfirm
 
 # ==========================================
 # STEP 2: INSTALL PACMAN PACKAGES
 # ==========================================
-echo -e "\n${BLUE}[2/5] Installing pacman packages...${NC}"
+echo -e "\n${BLUE}[2/4] Installing pacman packages...${NC}"
 
 # Define packages to install with their installation status
 declare -A PACKAGES=(
@@ -99,10 +99,15 @@ declare -A PACKAGES=(
     [stow]="Dotfiles manager"
     [docker]="Container platform"
     [docker-compose]="Docker compose tool"
-    [tree-sitter-cli]="Tree-sitter CLI"
+    [tree-sitter]="Tree-sitter CLI" 
     [stylua]="Lua code formatter"
-    [taplo-cli]="TOML formatter"
+    [taplo]="TOML formatter"
     [yamlfmt]="YAML formatter"
+    [ripgrep]="Extremely fast search tool"
+    [bat]="Cat clone with syntax highlighting"
+    [btop]="Resource monitor"
+    [wget]="Network downloader (required for fonts)"
+    [unzip]="Archive extractor (required for fonts)"
 )
 
 PACKAGES_TO_INSTALL=()
@@ -125,33 +130,15 @@ else
 fi
 
 # ==========================================
-# STEP 3: INSTALL UV (Python Environment Manager)
+# STEP 3: RUN TOOL CONFIGURATION SCRIPTS
 # ==========================================
-echo -e "\n${BLUE}[3/5] Installing UV (Python environment manager)...${NC}"
-
-if cmd_exists uv; then
-    print_success "UV: already installed"
-else
-    print_status "Downloading and installing UV..."
-    if curl -LsSf https://astral.sh/uv/install.sh | sh; then
-        print_success "UV installed successfully"
-        # Add UV to PATH for current session
-        export PATH="$HOME/.cargo/bin:$PATH"
-    else
-        print_error "Failed to install UV"
-        exit 1
-    fi
-fi
-
-# ==========================================
-# STEP 4: RUN TOOL CONFIGURATION SCRIPTS
-# ==========================================
-echo -e "\n${BLUE}[4/5] Running tool configuration scripts...${NC}"
+echo -e "\n${BLUE}[3/4] Running tool configuration scripts...${NC}"
 
 # Define the order of tool scripts to run
 # Order matters: dependencies first, then configurations
 TOOL_SCRIPTS=(
-    "base-devel"    # Verify build tools
+    "base-devel"    # Verify build tools (Needed for Paru)
+    "paru"          # Build and install AUR helper
     "git"           # Configure git
     "docker"        # Configure docker
     "neovim"        # Verify neovim
@@ -160,6 +147,10 @@ TOOL_SCRIPTS=(
     "zoxide"        # Verify zoxide
     "eza"           # Verify eza
     "fzf"           # Verify fzf
+    "ripgrep"       # Verify ripgrep
+    "bat"           # Verify bat
+    "btop"          # Verify btop
+    "fonts"         # Download and install Nerd Fonts
 )
 
 FAILED_SCRIPTS=()
@@ -174,9 +165,9 @@ for script in "${TOOL_SCRIPTS[@]}"; do
 done
 
 # ==========================================
-# STEP 5: SETUP DOTFILES (LAST)
+# STEP 4: SETUP DOTFILES (LAST)
 # ==========================================
-echo -e "\n${BLUE}[5/5] Setting up dotfiles...${NC}"
+echo -e "\n${BLUE}[4/4] Setting up dotfiles...${NC}"
 
 if run_tool_script "stow"; then
     print_success "Dotfiles setup: completed"
@@ -203,10 +194,10 @@ fi
 
 echo -e "\n${YELLOW}Next steps:${NC}"
 echo "  1. Reload your shell: exec \$SHELL"
-echo "  2. Verify everything: which git nvim tmux docker uv"
+echo "  2. Verify everything: command -v git nvim tmux docker uv paru rg bat btop"
 echo "  3. Check dotfiles: ls -la ~/"
+echo "  4. Activate Docker permissions: newgrp docker"
 
 echo -e "\n${BLUE}========================================${NC}"
 echo -e "${GREEN}Setup complete!${NC}"
 echo -e "${BLUE}========================================${NC}"
-

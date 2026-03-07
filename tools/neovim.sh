@@ -24,7 +24,7 @@ echo -e "${BLUE}========================================${NC}"
 echo -e "\n${BLUE}Verifying Neovim installation...${NC}"
 
 if command -v nvim &> /dev/null; then
-    NVIM_PATH=$(which nvim)
+    NVIM_PATH=$(command -v nvim)
     NVIM_VER=$(nvim --version | head -n 1)
     echo -e "${GREEN}✅ Neovim found at: $NVIM_PATH${NC}"
     echo -e "${GREEN}✅ $NVIM_VER${NC}"
@@ -60,5 +60,5 @@ if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
     for dep in "${MISSING_DEPS[@]}"; do
         echo -e "  ⚠️  $dep"
     done
-    echo "Install them via: sudo pacman -S tree-sitter-cli stylua taplo-cli yamlfmt"
+    echo "Install them via: sudo pacman -S tree-sitter-cli stylua taplo yamlfmt"
 fi
