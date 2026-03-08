@@ -1,88 +1,61 @@
 #!/usr/bin/bash
 
 # ==========================================
-# Stow Configuration Script
+# GNU Stow Configuration Script
 # Manages dotfiles symlinks via GNU Stow
-# Clones or updates dotfiles repository
 # ==========================================
 
-set -e
+set -euo pipefail
 
-# Color codes for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/utils.sh"
 
-DOTFILES_DIR="$HOME/dotfiles"
+log_section "GNU Stow Configuration"
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Dotfiles Setup via GNU Stow${NC}"
-echo -e "${BLUE}========================================${NC}"
-
-# ==========================================
-# PRE-FLIGHT DEPENDENCY CHECK
-# ==========================================
-echo -e "\n${BLUE}Checking core dependencies...${NC}"
-DEPS=("git" "gh" "stow")
-for cmd in "${DEPS[@]}"; do
-    if ! command -v "$cmd" &> /dev/null; then
-        echo -e "${RED}❌ Missing dependency: $cmd${NC}"
-        echo "Please install it via pacman first."
-        exit 1
+# Check if stow is installed
+if ! command_exists "stow"; then
+    log_info "Installing stow..."
+    if sudo pacman -S --noconfirm stow; then
+        log_success "Stow installed."
     else
-        echo -e "${GREEN}✅ $cmd: installed${NC}"
-    fi
-done
-
-# ==========================================
-# PART 1: CHECK/CLONE DOTFILES REPOSITORY
-# ==========================================
-echo -e "\n${BLUE}[1/2] Checking dotfiles repository...${NC}"
-
-if [ -d "$DOTFILES_DIR" ]; then
-    echo -e "${GREEN}✅ Dotfiles directory found at: $DOTFILES_DIR${NC}"
-    
-    echo -e "${BLUE}Updating dotfiles (git pull --rebase)...${NC}"
-    cd "$DOTFILES_DIR"
-    
-    if git pull --rebase; then
-        echo -e "${GREEN}✅ Dotfiles updated successfully${NC}"
-    else
-        echo -e "${RED}❌ Failed to update dotfiles${NC}"
-        exit 1
-    fi
-else
-    echo -e "${YELLOW}⚠️  Dotfiles directory not found${NC}"
-    echo -e "${BLUE}Cloning dotfiles repository...${NC}"
-    
-    # We can skip the mkdir -p since $HOME already exists
-    if gh repo clone dotfiles "$DOTFILES_DIR"; then
-        echo -e "${GREEN}✅ Dotfiles cloned successfully${NC}"
-    else
-        echo -e "${RED}❌ Failed to clone dotfiles. Make sure:${NC}"
-        echo "    - GitHub CLI (gh) is authenticated (gh auth login)"
-        echo "    - Your dotfiles repository exists as 'dotfiles'"
+        log_error "Failed to install stow."
         exit 1
     fi
 fi
 
-# ==========================================
-# PART 2: STOW DOTFILES
-# ==========================================
-echo -e "\n${BLUE}[2/2] Stowing dotfiles...${NC}"
+# Define dotfiles directory (relative to this script: ../dotfiles)
+# Upstream expects dotfiles in ~/dotfiles or cloned there.
+# But we are in a repo structure. Let's assume the repo IS the dotfiles source.
+# If this script is in `archlinux/tools/stow.sh`, the root is `archlinux/`.
+# Does `archlinux/` contain `dotfiles/`? Yes, based on README.
+# So `DOTFILES_DIR` should be `../dotfiles`.
 
-# Treat the dotfiles directory itself as the package using '.'
-if stow -d "$DOTFILES_DIR" -t ~ .; then
-    echo -e "${GREEN}✅ Dotfiles stowed successfully${NC}"
-    echo -e "${BLUE}========================================${NC}"
-    echo -e "${GREEN}✅ Dotfiles setup complete!${NC}"
-    echo -e "${BLUE}========================================${NC}"
+DOTFILES_DIR="$(realpath "$SCRIPT_DIR/../dotfiles")"
+
+if [ -d "$DOTFILES_DIR" ]; then
+    log_info "Found dotfiles at: $DOTFILES_DIR"
+    log_info "Stowing dotfiles..."
+    
+    # Run stow command
+    # -d: directory containing packages (DOTFILES_DIR)
+    # -t: target directory ($HOME)
+    # .: package name (treat DOTFILES_DIR content as the package)
+    
+    if stow -v -d "$DOTFILES_DIR" -t "$HOME" . 2>/dev/null; then
+        log_success "Dotfiles stowed successfully."
+    else
+        log_warn "Stow reported conflicts. Retrying with --adopt..."
+        if stow -v --adopt -d "$DOTFILES_DIR" -t "$HOME" .; then
+            log_success "Dotfiles stowed with --adopt."
+            log_info "Note: --adopt may have modified files in dotfiles/. Check git status."
+            # Optionally reset changes if you want strictly repo version
+            # git -C "$DOTFILES_DIR" checkout .
+        else
+            log_error "Failed to stow dotfiles."
+            exit 1
+        fi
+    fi
 else
-    echo -e "${RED}❌ Failed to stow dotfiles${NC}"
-    echo -e "${YELLOW}Fixing Conflicts:${NC} If Stow says a file already exists (like ~/.zshrc),"
-    echo -e "you must delete the existing file first, or run:"
-    echo -e "  stow --adopt -d \"$DOTFILES_DIR\" -t ~ ."
+    log_error "Dotfiles directory not found at $DOTFILES_DIR"
     exit 1
 fi
