@@ -1,6 +1,28 @@
-#! /usr/bin/bash
+#!/usr/bin/bash
 
-# Git Configuration for General Performance Improvement
+# ==========================================
+# Git Configuration & Optimization Script
+# Configures Git for performance and workflow
+# ==========================================
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/utils.sh"
+
+log_section "Git Configuration & Optimization"
+
+# Verify Installation
+if ! command_exists "git"; then
+    log_info "Installing git..."
+    sudo pacman -S --noconfirm git
+else
+    GIT_VER=$(git --version)
+    log_info "Git is already installed: $GIT_VER"
+fi
+
+# Apply Performance Optimizations (from upstream)
+log_info "Applying Git performance optimizations..."
 git config --global core.preloadindex true
 git config --global core.fsmonitor true
 git config --global core.untrackedcache true
@@ -18,9 +40,12 @@ git config --global branch.sort -committerdate
 git config --global diff.algorithm histogram
 git config --global help.autoCorrect prompt
 
-# Aliases: (optional, recommended for workflow speed)
+# Apply Useful Aliases
+log_info "Applying Git aliases..."
 git config --global alias.st "status -s"
 git config --global alias.ci "commit"
 git config --global alias.co "checkout"
 git config --global alias.br "branch"
 git config --global alias.lg "log --oneline --graph"
+
+log_success "Git configuration complete."

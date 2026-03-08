@@ -1,64 +1,54 @@
 #!/usr/bin/bash
 
 # ==========================================
-# Neovim Verification Script
-# Verifies Neovim and dependencies
-# Configuration is handled by dotfiles
+# Neovim Configuration & Verification
 # ==========================================
 
-set -e
+set -euo pipefail
 
-# Color codes for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/utils.sh"
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Neovim Verification${NC}"
-echo -e "${BLUE}========================================${NC}"
+log_section "Neovim Configuration"
 
-# ==========================================
-# VERIFY NEOVIM INSTALLATION
-# ==========================================
-echo -e "\n${BLUE}Verifying Neovim installation...${NC}"
-
-if command -v nvim &> /dev/null; then
-    NVIM_PATH=$(command -v nvim)
+# Verify Neovim is installed (from core packages)
+if command_exists "nvim"; then
     NVIM_VER=$(nvim --version | head -n 1)
-    echo -e "${GREEN}✅ Neovim found at: $NVIM_PATH${NC}"
-    echo -e "${GREEN}✅ $NVIM_VER${NC}"
+    log_success "Neovim is installed: $NVIM_VER"
 else
-    echo -e "${RED}❌ Neovim not found. Please install it via pacman first.${NC}"
+    log_error "Neovim is not installed. Please run setup.sh again."
     exit 1
 fi
 
-# ==========================================
-# VERIFY EXTERNAL DEPENDENCIES
-# ==========================================
-echo -e "\n${BLUE}Verifying external dependencies...${NC}"
-
-DEPS=("tree-sitter" "stylua" "taplo" "yamlfmt")
-MISSING_DEPS=()
-
-for dep in "${DEPS[@]}"; do
-    if command -v "$dep" &> /dev/null; then
-        echo -e "${GREEN}✅ $dep: installed${NC}"
+# Ensure Python Support for Neovim (pynvim)
+# Check if python3 is available
+if command_exists "python3"; then
+    log_info "Checking pynvim support..."
+    # Check if pynvim is installed via pip (user or system)
+    # Alternatively, use pacman package `python-pynvim` if available (Arch way)
+    if pacman -Qi python-pynvim &>/dev/null; then
+        log_success "pynvim (system) is installed."
     else
-        echo -e "⚠️  $dep not found"
-        MISSING_DEPS+=("$dep")
+        log_info "Installing python-pynvim via pacman..."
+        sudo pacman -S --noconfirm python-pynvim
+    fi
+else
+    log_warn "Python3 not found. Skipping pynvim check."
+fi
+
+# Verify formatters/LSP tools (optional check)
+MISSING_TOOLS=()
+for tool in stylua taplo yamlfmt; do
+    if ! command_exists "$tool"; then
+        MISSING_TOOLS+=("$tool")
     fi
 done
 
-echo -e "\n${BLUE}========================================${NC}"
-echo -e "${GREEN}✅ Neovim is installed!${NC}"
-echo -e "${BLUE}Configuration (init.lua) is managed by dotfiles${NC}"
-echo -e "${BLUE}========================================${NC}"
-
-if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
-    echo -e "\n${BLUE}Missing dependencies:${NC}"
-    for dep in "${MISSING_DEPS[@]}"; do
-        echo -e "  ⚠️  $dep"
-    done
-    echo "Install them via: sudo pacman -S tree-sitter-cli stylua taplo yamlfmt"
+if [ ${#MISSING_TOOLS[@]} -gt 0 ]; then
+    log_warn "Some LSP tools are missing: ${MISSING_TOOLS[*]}"
+    log_info "They should have been installed by setup.sh."
+else
+    log_success "LSP tools (stylua, taplo, yamlfmt) are ready."
 fi
+
+log_success "Neovim setup complete."

@@ -1,49 +1,42 @@
-#!/bin/bash
+#!/usr/bin/bash
 
 # ==========================================
-# Tmux Verification Script
-# Verifies Tmux installation
-# Configuration is handled by dotfiles
+# Tmux Setup & Verification
+# Installs Tmux and TPM (Plugin Manager)
 # ==========================================
 
-set -e
+set -euo pipefail
 
-# Color codes for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/utils.sh"
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Tmux Verification${NC}"
-echo -e "${BLUE}========================================${NC}"
+log_section "Tmux Setup & Verification"
 
-# ==========================================
-# VERIFY INSTALLATION
-# ==========================================
-echo -e "\n${BLUE}Verifying Tmux installation...${NC}"
-
-if command -v tmux &> /dev/null; then
-    TMUX_PATH=$(command -v tmux)
-    TMUX_VER=$(tmux -V)
-    echo -e "${GREEN}✅ Tmux found at: $TMUX_PATH${NC}"
-    echo -e "${GREEN}✅ $TMUX_VER${NC}"
-    
-    # NEW: Check for Tmux Plugin Manager (TPM)
-    echo -e "\n${BLUE}Verifying dependencies...${NC}"
-    if [ -d "$HOME/.tmux/plugins/tpm" ]; then
-        echo -e "${GREEN}✅ TPM (Tmux Plugin Manager): installed${NC}"
-    else
-        echo -e "${YELLOW}⚠️  TPM not found at ~/.tmux/plugins/tpm${NC}"
-        echo -e "   Install via: git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm"
-    fi
-
-    echo -e "\n${BLUE}========================================${NC}"
-    echo -e "${GREEN}✅ Tmux setup verified!${NC}"
-    echo -e "${BLUE}Configuration (.tmux.conf) is managed by dotfiles${NC}"
-    echo -e "${BLUE}========================================${NC}"
+# Install Tmux
+if ! command_exists "tmux"; then
+    log_info "Installing Tmux..."
+    sudo pacman -S --noconfirm tmux
 else
-    echo -e "${RED}❌ Tmux not found. Please install it via pacman first.${NC}"
-    exit 1
+    TMUX_VER=$(tmux -V)
+    log_info "Tmux is installed: $TMUX_VER"
 fi
+
+# Install TPM (Tmux Plugin Manager)
+TPM_DIR="$HOME/.tmux/plugins/tpm"
+log_info "Checking TPM (Tmux Plugin Manager)..."
+
+if [ ! -d "$TPM_DIR" ]; then
+    log_info "Installing TPM..."
+    mkdir -p "$HOME/.tmux/plugins"
+    git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"
+    log_success "TPM installed."
+else
+    log_info "TPM is already installed. Updating..."
+    if git -C "$TPM_DIR" pull; then
+        log_success "TPM updated."
+    else
+        log_warn "Failed to update TPM."
+    fi
+fi
+
+log_success "Tmux setup complete."

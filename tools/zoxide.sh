@@ -1,42 +1,21 @@
 #!/usr/bin/bash
 
 # ==========================================
-# Zoxide Verification Script
-# Verifies zoxide installation
-# Shell integration is handled by dotfiles
+# Zoxide Setup (Smart Directory Jumper)
+# Verifies installation
 # ==========================================
 
-set -e
+set -euo pipefail
 
-# Color codes for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/utils.sh"
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Zoxide Verification${NC}"
-echo -e "${BLUE}========================================${NC}"
+log_section "Zoxide Verification"
 
-echo -e "\n${BLUE}Verifying zoxide installation...${NC}"
-
-if command -v zoxide &> /dev/null; then
-    ZOXIDE_PATH=$(command -v zoxide)
-    ZOXIDE_VER=$(zoxide --version)
-    echo -e "${GREEN}✅ Zoxide found at: $ZOXIDE_PATH${NC}"
-    echo -e "${GREEN}✅ $ZOXIDE_VER${NC}"
-    echo -e "\n${BLUE}========================================${NC}"
-    echo -e "${GREEN}✅ Zoxide is installed!${NC}"
-    echo -e "${BLUE}Shell integration is managed by dotfiles${NC}"
-    
-    # Added standard usage commands for quick reference
-    echo -e "${YELLOW}Standard Commands:${NC}"
-    echo "  z foo  - cd into highest ranked directory matching foo"
-    echo "  z foo  - cd into highest ranked directory matching foo"
-    echo "  zi foo - cd with interactive selection (using fzf)"
-    echo -e "${BLUE}========================================${NC}"
+if ! command_exists "zoxide"; then
+    log_info "Installing Zoxide..."
+    sudo pacman -S --noconfirm zoxide
 else
-    echo -e "${RED}❌ Zoxide not found. Please install it via pacman first.${NC}"
-    exit 1
+    ZOXIDE_VER=$(zoxide --version)
+    log_success "Zoxide is installed: $ZOXIDE_VER"
 fi

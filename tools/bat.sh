@@ -5,31 +5,18 @@
 # Verifies bat installation (cat clone with syntax highlighting)
 # ==========================================
 
-set -e
+set -euo pipefail
 
-# Color codes for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/utils.sh"
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Bat Verification${NC}"
-echo -e "${BLUE}========================================${NC}"
+log_section "Bat Verification"
 
-echo -e "\n${BLUE}Verifying bat installation...${NC}"
-
-if command -v bat &> /dev/null; then
-    BAT_PATH=$(command -v bat)
-    BAT_VER=$(bat --version | head -n 1)
-    echo -e "${GREEN}✅ Bat found at: $BAT_PATH${NC}"
-    echo -e "${GREEN}✅ $BAT_VER${NC}"
-    echo -e "\n${BLUE}========================================${NC}"
-    echo -e "${GREEN}✅ Bat is ready!${NC}"
-    echo -e "${YELLOW}Integration:${NC} Used as the syntax-highlighting previewer for fzf"
-    echo -e "${BLUE}========================================${NC}"
+if ! command_exists "bat"; then
+    log_info "Installing Bat..."
+    sudo pacman -S --noconfirm bat
 else
-    echo -e "${RED}❌ Bat not found. Please install 'bat' via pacman.${NC}"
-    exit 1
+    BAT_VER=$(bat --version | head -n 1)
+    log_success "Bat is installed: $BAT_VER"
+    log_info "Bat is used as the syntax-highlighting previewer for fzf."
 fi

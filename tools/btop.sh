@@ -5,29 +5,17 @@
 # Verifies btop installation
 # ==========================================
 
-set -e
+set -euo pipefail
 
-# Color codes for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/utils.sh"
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Btop Verification${NC}"
-echo -e "${BLUE}========================================${NC}"
+log_section "Btop Verification"
 
-echo -e "\n${BLUE}Verifying btop installation...${NC}"
-
-if command -v btop &> /dev/null; then
-    BTOP_PATH=$(command -v btop)
-    BTOP_VER=$(btop --version | head -n 1)
-    echo -e "${GREEN}✅ Btop found at: $BTOP_PATH${NC}"
-    echo -e "${GREEN}✅ $BTOP_VER${NC}"
-    echo -e "\n${BLUE}========================================${NC}"
-    echo -e "${GREEN}✅ Btop is ready!${NC}"
-    echo -e "${BLUE}========================================${NC}"
+if ! command_exists "btop"; then
+    log_info "Installing Btop..."
+    sudo pacman -S --noconfirm btop
 else
-    echo -e "${RED}❌ Btop not found. Please install 'btop' via pacman.${NC}"
-    exit 1
+    BTOP_VER=$(btop --version | head -n 1)
+    log_success "Btop is installed: $BTOP_VER"
 fi
