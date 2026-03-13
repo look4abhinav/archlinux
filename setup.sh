@@ -7,6 +7,13 @@
 
 set -e
 
+# Prevent running as root (makepkg in paru.sh will fail, and dotfiles shouldn't be root)
+if [ "$EUID" -eq 0 ]; then
+    echo -e "\033[0;31m[✗]\033[0m Please do not run this script as root."
+    echo "Run it as your normal user. The script will prompt for sudo when necessary."
+    exit 1
+fi
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'

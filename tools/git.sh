@@ -1,4 +1,21 @@
-#! /usr/bin/bash
+#!/usr/bin/bash
+
+# ==========================================
+# Git Configuration Script
+# Applies global performance improvements
+# ==========================================
+
+set -e
+
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}Git Global Configuration${NC}"
+echo -e "${BLUE}========================================${NC}"
+
+echo -e "\n${BLUE}Applying Git performance and workflow settings...${NC}"
 
 # Git Configuration for General Performance Improvement
 git config --global core.preloadindex true
@@ -24,3 +41,6 @@ git config --global alias.ci "commit"
 git config --global alias.co "checkout"
 git config --global alias.br "branch"
 git config --global alias.lg "log --oneline --graph"
+
+echo -e "${GREEN}✅ Git configuration applied successfully!${NC}"
+echo -e "${BLUE}========================================${NC}"

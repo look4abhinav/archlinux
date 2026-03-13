@@ -32,11 +32,14 @@ if command -v tmux &> /dev/null; then
     
     # NEW: Check for Tmux Plugin Manager (TPM)
     echo -e "\n${BLUE}Verifying dependencies...${NC}"
-    if [ -d "$HOME/.tmux/plugins/tpm" ]; then
+    TPM_DIR="$HOME/.config/tmux/plugins/tpm"
+    if [ -d "$TPM_DIR" ]; then
         echo -e "${GREEN}✅ TPM (Tmux Plugin Manager): installed${NC}"
     else
-        echo -e "${YELLOW}⚠️  TPM not found at ~/.tmux/plugins/tpm${NC}"
-        echo -e "   Install via: git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm"
+        echo -e "${YELLOW}⚠️  TPM not found. Installing to $TPM_DIR...${NC}"
+        mkdir -p "$HOME/.config/tmux/plugins"
+        git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"
+        echo -e "${GREEN}✅ TPM installed successfully!${NC}"
     fi
 
     echo -e "\n${BLUE}========================================${NC}"
