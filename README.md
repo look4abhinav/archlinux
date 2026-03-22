@@ -12,7 +12,9 @@ A modular, idempotent, and beautifully formatted shell script for bootstrapping 
 
 ## 📦 What's Included
 
-- **Core CLI Tools**: `neovim`, `tmux`, `git`, `zoxide`, `eza`, `fzf`, `ripgrep`, `bat`, `btop`
+- **Core CLI Tools**: `neovim`, `tmux`, `git`, `zoxide`, `eza`, `fzf`, `ripgrep`, `bat`, `btop`, `yazi`
+- **Wayland Ecosystem**: `hyprland`, `sddm`, `ghostty`, `waybar`, `fuzzel`, `mako`, `hyprlock`, `hypridle`, `hyprpaper`
+- **Browsers**: `zen-browser-bin` (AUR)
 - **Development & Build Tools**: `base-devel`, `docker`, `docker-compose`
 - **Formatting & Parsing**: `tree-sitter`, `stylua`, `taplo`, `yamlfmt`
 - **Aesthetics**: Automatically downloads and installs the JetBrainsMono Nerd Font.
@@ -60,6 +62,9 @@ A modular, idempotent, and beautifully formatted shell script for bootstrapping 
 │   ├── stow.sh         # Clones dotfiles & symlinks with GNU Stow
 │   ├── tmux.sh         # Verifies tmux
 │   ├── uv.sh           # Verifies/configures uv (Python)
+│   ├── wayland.sh      # Configures SDDM & Wayland defaults
+│   ├── yazi.sh         # Verifies yazi file manager
+│   ├── zen-browser.sh  # Installs zen-browser via AUR
 │   └── zoxide.sh       # Verifies zoxide
 └── .gitignore
 ```

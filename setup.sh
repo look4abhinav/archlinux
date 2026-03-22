@@ -96,6 +96,30 @@ echo -e "\n${BLUE}[2/4] Installing pacman packages...${NC}"
 
 # Define packages to install with their installation status
 declare -A PACKAGES=(
+    [hyprland]="Dynamic Wayland compositor"
+    [xdg-desktop-portal-hyprland]="XDG portal for Hyprland"
+    [qt5-wayland]="Qt5 Wayland module"
+    [qt6-wayland]="Qt6 Wayland module"
+    [sddm]="Simple Desktop Display Manager"
+    [ghostty]="Fast, GPU-accelerated terminal emulator"
+    [waybar]="Highly customizable Wayland bar"
+    [fuzzel]="Application launcher for Wayland"
+    [mako]="Lightweight notification daemon"
+    [hyprpaper]="Wayland wallpaper utility"
+    [hyprlock]="Wayland screen locker"
+    [hypridle]="Idle management daemon"
+    [grim]="Screenshot tool for Wayland"
+    [slurp]="Region selection for Wayland"
+    [wl-clipboard]="Wayland clipboard utility"
+    [cliphist]="Clipboard history manager"
+    [brightnessctl]="Backlight control"
+    [polkit-kde-agent]="Authentication agent"
+    [yazi]="Blazing-fast terminal file manager"
+    [ffmpegthumbnailer]="Video thumbnails for yazi"
+    [poppler]="PDF rendering for yazi"
+    [fd]="Fast file search"
+    [ttf-jetbrains-mono]="JetBrains Mono font"
+    [ttf-nerd-fonts-symbols-common]="Nerd Fonts symbols"
     [base-devel]="Build tools and compilers"
     [git]="Version control system"
     [neovim]="Modern text editor"
@@ -146,6 +170,9 @@ echo -e "\n${BLUE}[3/4] Running tool configuration scripts...${NC}"
 TOOL_SCRIPTS=(
     "base-devel"    # Verify build tools (Needed for Paru)
     "paru"          # Build and install AUR helper
+    "wayland"       # Setup SDDM and Wayland ecosystem
+    "zen-browser"   # Install telemetry-free Zen Browser
+    "yazi"          # Verify yazi
     "git"           # Configure git
     "docker"        # Configure docker
     "neovim"        # Verify neovim
