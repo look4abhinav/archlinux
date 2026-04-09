@@ -25,7 +25,7 @@ echo -e "${BLUE}========================================${NC}"
 # PRE-FLIGHT DEPENDENCY CHECK
 # ==========================================
 echo -e "\n${BLUE}Checking core dependencies...${NC}"
-DEPS=("git" "gh" "stow")
+DEPS=("git" "stow")
 for cmd in "${DEPS[@]}"; do
     if ! command -v "$cmd" &> /dev/null; then
         echo -e "${RED}❌ Missing dependency: $cmd${NC}"
@@ -58,12 +58,12 @@ else
     echo -e "${BLUE}Cloning dotfiles repository...${NC}"
     
     # We can skip the mkdir -p since $HOME already exists
-    if gh repo clone dotfiles "$DOTFILES_DIR"; then
+    if git clone https://github.com/look4abhinav/dotfiles.git "$DOTFILES_DIR"; then
         echo -e "${GREEN}✅ Dotfiles cloned successfully${NC}"
     else
         echo -e "${RED}❌ Failed to clone dotfiles. Make sure:${NC}"
-        echo "    - GitHub CLI (gh) is authenticated (gh auth login)"
-        echo "    - Your dotfiles repository exists as 'dotfiles'"
+        echo "    - The repository is accessible at https://github.com/look4abhinav/dotfiles.git"
+        echo "    - You have an active internet connection"
         exit 1
     fi
 fi

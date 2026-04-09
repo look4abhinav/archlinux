@@ -82,17 +82,44 @@ echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}Arch Linux Development Setup${NC}"
 echo -e "${BLUE}========================================${NC}"
 
-# ==========================================
-# STEP 1: SYSTEM UPDATE
-# ==========================================
-echo -e "\n${BLUE}[1/4] Updating system packages...${NC}"
-print_status "Syncing and updating pacman..."
-sudo pacman -Syu --noconfirm
+# Install dialog for TUI if missing
+if ! cmd_exists dialog; then
+    print_status "Installing dialog for interactive menu..."
+    sudo pacman -Sy --noconfirm dialog
+fi
 
 # ==========================================
-# STEP 2: INSTALL PACMAN PACKAGES
+# INTERACTIVE TUI SETUP
 # ==========================================
-echo -e "\n${BLUE}[2/4] Installing pacman packages...${NC}"
+
+# Create a modern dark theme for dialog
+export DIALOGRC="/tmp/.setup_dialogrc"
+cat << 'EOF' > "$DIALOGRC"
+use_shadow = ON
+use_colors = ON
+screen_color = (CYAN,BLACK,ON)
+title_color = (MAGENTA,BLACK,ON)
+dialog_color = (WHITE,BLACK,OFF)
+border_color = (MAGENTA,BLACK,ON)
+button_active_color = (WHITE,BLUE,ON)
+button_inactive_color = (WHITE,BLACK,OFF)
+button_key_active_color = (WHITE,BLUE,ON)
+button_key_inactive_color = (RED,BLACK,OFF)
+button_label_active_color = (WHITE,BLUE,ON)
+button_label_inactive_color = (WHITE,BLACK,ON)
+menubox_color = (WHITE,BLACK,OFF)
+menubox_border_color = (MAGENTA,BLACK,ON)
+item_color = (WHITE,BLACK,OFF)
+item_selected_color = (BLACK,CYAN,ON)
+tag_color = (GREEN,BLACK,ON)
+tag_selected_color = (BLACK,CYAN,ON)
+tag_key_color = (GREEN,BLACK,OFF)
+tag_key_selected_color = (BLACK,CYAN,ON)
+check_color = (CYAN,BLACK,ON)
+check_selected_color = (BLACK,CYAN,ON)
+uarrow_color = (GREEN,BLACK,ON)
+darrow_color = (GREEN,BLACK,ON)
+EOF
 
 # Define packages to install with their installation status
 declare -A PACKAGES=(
@@ -141,9 +168,110 @@ declare -A PACKAGES=(
     [unzip]="Archive extractor (required for fonts)"
 )
 
+PKG_KEYS=($(echo "${!PACKAGES[@]}" | tr ' ' '\n' | sort))
+PKG_OPTIONS=()
+for pkg in "${PKG_KEYS[@]}"; do
+    PKG_OPTIONS+=("$pkg" "${PACKAGES[$pkg]}" "ON")
+done
+
+set +e
+SELECTED_PKGS=$(dialog --backtitle "✨ Arch Linux Developer Setup ✨" \
+    --title " 📦 Package Selection " \
+    --colors \
+    --checklist "Select packages to install\n(Space to toggle, Enter to confirm, Arrows to navigate):" 22 80 15 "${PKG_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+exit_status=$?
+set -e
+if [ $exit_status -ne 0 ]; then
+    clear
+    print_warning "Setup cancelled by user."
+    rm -f "$DIALOGRC"
+    exit 0
+fi
+
+# TOOL_SCRIPTS
+declare -A TOOL_DESCRIPTIONS=(
+    ["base-devel"]="Verify build tools (Needed for Paru)"
+    ["paru"]="Build and install AUR helper"
+    ["wayland"]="Setup SDDM and Wayland ecosystem"
+    ["zen-browser"]="Install telemetry-free Zen Browser"
+    ["yazi"]="Verify yazi"
+    ["git"]="Configure git"
+    ["docker"]="Configure docker"
+    ["neovim"]="Verify neovim"
+    ["tmux"]="Verify tmux"
+    ["uv"]="Setup UV"
+    ["zoxide"]="Verify zoxide"
+    ["eza"]="Verify eza"
+    ["fzf"]="Verify fzf"
+    ["ripgrep"]="Verify ripgrep"
+    ["bat"]="Verify bat"
+    ["btop"]="Verify btop"
+    ["fonts"]="Download and install Nerd Fonts"
+    ["stow"]="Dotfiles setup via stow"
+)
+
+# Order of execution
+TOOL_ORDER=(
+    "base-devel"
+    "paru"
+    "wayland"
+    "zen-browser"
+    "yazi"
+    "git"
+    "docker"
+    "neovim"
+    "tmux"
+    "uv"
+    "zoxide"
+    "eza"
+    "fzf"
+    "ripgrep"
+    "bat"
+    "btop"
+    "fonts"
+    "stow"
+)
+
+TOOL_OPTIONS=()
+for tool in "${TOOL_ORDER[@]}"; do
+    TOOL_OPTIONS+=("$tool" "${TOOL_DESCRIPTIONS[$tool]}" "ON")
+done
+
+set +e
+SELECTED_TOOLS=$(dialog --backtitle "✨ Arch Linux Developer Setup ✨" \
+    --title " ⚙️ Tool Configuration " \
+    --colors \
+    --checklist "Select tools to configure\n(Space to toggle, Enter to confirm, Arrows to navigate):" 22 80 15 "${TOOL_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+exit_status=$?
+set -e
+if [ $exit_status -ne 0 ]; then
+    clear
+    print_warning "Setup cancelled by user."
+    rm -f "$DIALOGRC"
+    exit 0
+fi
+
+clear
+rm -f "$DIALOGRC"
+
+eval "SELECTED_PKG_ARRAY=($SELECTED_PKGS)"
+eval "SELECTED_TOOL_ARRAY=($SELECTED_TOOLS)"
+
+# ==========================================
+# STEP 1: SYSTEM UPDATE
+# ==========================================
+echo -e "\n${BLUE}[1/3] Updating system packages...${NC}"
+print_status "Syncing and updating pacman..."
+sudo pacman -Syu --noconfirm
+
+# ==========================================
+# STEP 2: INSTALL PACMAN PACKAGES
+# ==========================================
+echo -e "\n${BLUE}[2/3] Installing pacman packages...${NC}"
+
 PACKAGES_TO_INSTALL=()
 
-for pkg in "${!PACKAGES[@]}"; do
+for pkg in "${SELECTED_PKG_ARRAY[@]}"; do
     if pkg_installed "$pkg"; then
         print_success "$pkg: already installed"
     else
@@ -157,58 +285,27 @@ if [ ${#PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
     sudo pacman -S "${PACKAGES_TO_INSTALL[@]}" --noconfirm
     print_success "Pacman packages installed"
 else
-    print_success "All pacman packages already installed"
+    print_success "All selected pacman packages already installed"
 fi
 
 # ==========================================
 # STEP 3: RUN TOOL CONFIGURATION SCRIPTS
 # ==========================================
-echo -e "\n${BLUE}[3/4] Running tool configuration scripts...${NC}"
-
-# Define the order of tool scripts to run
-# Order matters: dependencies first, then configurations
-TOOL_SCRIPTS=(
-    "base-devel"    # Verify build tools (Needed for Paru)
-    "paru"          # Build and install AUR helper
-    "wayland"       # Setup SDDM and Wayland ecosystem
-    "zen-browser"   # Install telemetry-free Zen Browser
-    "yazi"          # Verify yazi
-    "git"           # Configure git
-    "docker"        # Configure docker
-    "neovim"        # Verify neovim
-    "tmux"          # Verify tmux
-    "uv"            # Setup UV
-    "zoxide"        # Verify zoxide
-    "eza"           # Verify eza
-    "fzf"           # Verify fzf
-    "ripgrep"       # Verify ripgrep
-    "bat"           # Verify bat
-    "btop"          # Verify btop
-    "fonts"         # Download and install Nerd Fonts
-)
+echo -e "\n${BLUE}[3/3] Running tool configuration scripts...${NC}"
 
 FAILED_SCRIPTS=()
 
-for script in "${TOOL_SCRIPTS[@]}"; do
-    if run_tool_script "$script"; then
-        print_success "$script: completed"
-    else
-        print_error "$script: failed or skipped"
-        FAILED_SCRIPTS+=("$script")
+for script in "${TOOL_ORDER[@]}"; do
+    # Check if script is in SELECTED_TOOL_ARRAY
+    if [[ " ${SELECTED_TOOL_ARRAY[@]} " =~ " ${script} " ]]; then
+        if run_tool_script "$script"; then
+            print_success "$script: completed"
+        else
+            print_error "$script: failed or skipped"
+            FAILED_SCRIPTS+=("$script")
+        fi
     fi
 done
-
-# ==========================================
-# STEP 4: SETUP DOTFILES (LAST)
-# ==========================================
-echo -e "\n${BLUE}[4/4] Setting up dotfiles...${NC}"
-
-if run_tool_script "stow"; then
-    print_success "Dotfiles setup: completed"
-else
-    print_error "Dotfiles setup: failed or skipped"
-    FAILED_SCRIPTS+=("stow")
-fi
 
 # ==========================================
 # SUMMARY
