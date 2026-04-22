@@ -63,12 +63,12 @@ print_error() {
 run_tool_script() {
     local script_name="$1"
     local script_path="$TOOLS_DIR/$script_name.sh"
-    
+
     if [ ! -f "$script_path" ]; then
         print_warning "Tool script not found: $script_path"
         return 1
     fi
-    
+
     echo -e "\n${BLUE}========================================${NC}"
     bash "$script_path"
     echo -e "${BLUE}========================================${NC}"
@@ -157,7 +157,7 @@ declare -A PACKAGES=(
     [stow]="Dotfiles manager"
     [docker]="Container platform"
     [docker-compose]="Docker compose tool"
-    [tree-sitter]="Tree-sitter CLI" 
+    [tree-sitter]="Tree-sitter CLI"
     [stylua]="Lua code formatter"
     [taplo]="TOML formatter"
     [yamlfmt]="YAML formatter"
@@ -220,6 +220,7 @@ TOOL_ORDER=(
     "git"
     "docker"
     "neovim"
+    "tree-sitter-cli"
     "tmux"
     "uv"
     "zoxide"
