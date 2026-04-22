@@ -198,6 +198,7 @@ declare -A TOOL_DESCRIPTIONS=(
     ["git"]="Configure git"
     ["docker"]="Configure docker"
     ["neovim"]="Verify neovim"
+    ["tree-sitter-cli"]="Setup Syntax Tree in Neovim"
     ["tmux"]="Verify tmux"
     ["uv"]="Setup UV"
     ["zoxide"]="Verify zoxide"
