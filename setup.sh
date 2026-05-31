@@ -206,6 +206,7 @@ declare -A TOOL_DESCRIPTIONS=(
     ["fzf"]="Verify fzf"
     ["ripgrep"]="Verify ripgrep"
     ["bat"]="Verify bat"
+    ["fd"]="Verify fd"
     ["btop"]="Verify btop"
     ["fonts"]="Download and install Nerd Fonts"
     ["stow"]="Dotfiles setup via stow"
@@ -229,6 +230,7 @@ TOOL_ORDER=(
     "fzf"
     "ripgrep"
     "bat"
+    "fd"
     "btop"
     "fonts"
     "stow"
@@ -327,7 +329,7 @@ fi
 
 echo -e "\n${YELLOW}Next steps:${NC}"
 echo "  1. Reload your shell: exec \$SHELL"
-echo "  2. Verify everything: command -v git nvim tmux docker uv paru rg bat btop"
+echo "  2. Verify everything: command -v git nvim tmux docker uv paru rg bat fd btop"
 echo "  3. Check dotfiles: ls -la ~/"
 echo "  4. Activate Docker permissions: newgrp docker"
 
