@@ -23,9 +23,11 @@ fi
 
 echo ""
 echo "[2/4] Installing UV..."
-# Download and run the official installer. 
-# This automatically places binaries in ~/.local/bin and configures your shell profile.
-if curl -LsSf https://astral.sh/uv/install.sh | sh; then
+# Download and run the official installer.
+# This places binaries in ~/.local/bin. Shell PATH/rc configuration is managed
+# separately by the user's dotfiles, so we tell the installer not to modify any
+# shell rc files.
+if curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh; then
     echo "✅  UV installation script executed successfully."
 else
     echo "❌  Failed to run UV installation script."
@@ -83,8 +85,8 @@ echo "------------------------------------------"
 echo ""
 echo "Installation Summary:"
 echo "  • UV and tools have been installed to: ~/.local/bin"
-echo "  • The installer automatically updated your shell configuration."
+echo "  • Shell PATH integration is managed by your dotfiles."
 echo ""
 echo "Note: To use these tools in your current terminal session, run:"
-echo "  source ~/.bashrc (or ~/.zshrc) OR simply open a new terminal."
+echo "  exec \$SHELL  OR simply open a new terminal."
 echo "=========================================="
