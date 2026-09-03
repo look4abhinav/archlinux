@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # ==========================================
 # Docker Setup & Verification Script
@@ -22,14 +22,14 @@ echo -e "${BLUE}========================================${NC}"
 # 1. VERIFY INSTALLATION
 # ==========================================
 echo -e "\n${BLUE}Verifying Docker installation...${NC}"
-if command -v docker &> /dev/null; then
-    DOCKER_PATH=$(command -v docker)
-    DOCKER_VER=$(docker --version)
-    echo -e "${GREEN}✅ Docker found at: $DOCKER_PATH${NC}"
-    echo -e "${GREEN}✅ $DOCKER_VER${NC}"
+if command -v docker &>/dev/null; then
+	DOCKER_PATH=$(command -v docker)
+	DOCKER_VER=$(docker --version)
+	echo -e "${GREEN}✅ Docker found at: $DOCKER_PATH${NC}"
+	echo -e "${GREEN}✅ $DOCKER_VER${NC}"
 else
-    echo -e "${RED}❌ Docker not found. Please install it via pacman first.${NC}"
-    exit 1
+	echo -e "${RED}❌ Docker not found. Please install it via pacman first.${NC}"
+	exit 1
 fi
 
 # ==========================================
@@ -38,21 +38,21 @@ fi
 echo -e "\n${BLUE}Configuring Docker service...${NC}"
 # Using --now handles both 'enable' and 'start' in a single command
 if sudo systemctl enable --now docker.service; then
-    echo -e "${GREEN}✅ Docker service enabled and started${NC}"
+	echo -e "${GREEN}✅ Docker service enabled and started${NC}"
 else
-    echo -e "${RED}❌ Failed to enable Docker service${NC}"
-    exit 1
+	echo -e "${RED}❌ Failed to enable Docker service${NC}"
+	exit 1
 fi
 
 # ==========================================
 # 3. CONFIGURE USER PERMISSIONS
 # ==========================================
 echo -e "\n${BLUE}Configuring user permissions...${NC}"
-if sudo usermod -aG docker "$USER"; then
-    echo -e "${GREEN}✅ User $USER added to 'docker' group${NC}"
+if sudo usermod -aG docker "$(id -un)"; then
+	echo -e "${GREEN}✅ User $(id -un) added to 'docker' group${NC}"
 else
-    echo -e "${RED}❌ Failed to add user to docker group${NC}"
-    exit 1
+	echo -e "${RED}❌ Failed to add user to docker group${NC}"
+	exit 1
 fi
 
 echo -e "\n${BLUE}========================================${NC}"

@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # ==========================================
 # Btop Verification Script
@@ -19,15 +19,15 @@ echo -e "${BLUE}========================================${NC}"
 
 echo -e "\n${BLUE}Verifying btop installation...${NC}"
 
-if command -v btop &> /dev/null; then
-    BTOP_PATH=$(command -v btop)
-    BTOP_VER=$(btop --version | head -n 1)
-    echo -e "${GREEN}✅ Btop found at: $BTOP_PATH${NC}"
-    echo -e "${GREEN}✅ $BTOP_VER${NC}"
-    echo -e "\n${BLUE}========================================${NC}"
-    echo -e "${GREEN}✅ Btop is ready!${NC}"
-    echo -e "${BLUE}========================================${NC}"
+if command -v btop &>/dev/null; then
+	BTOP_PATH=$(command -v btop)
+	BTOP_VER=$(btop --version | head -n 1)
+	echo -e "${GREEN}✅ Btop found at: $BTOP_PATH${NC}"
+	echo -e "${GREEN}✅ $BTOP_VER${NC}"
+	echo -e "\n${BLUE}========================================${NC}"
+	echo -e "${GREEN}✅ Btop is ready!${NC}"
+	echo -e "${BLUE}========================================${NC}"
 else
-    echo -e "${RED}❌ Btop not found. Please install 'btop' via pacman.${NC}"
-    exit 1
+	echo -e "${RED}❌ Btop not found. Please install 'btop' via pacman.${NC}"
+	exit 1
 fi

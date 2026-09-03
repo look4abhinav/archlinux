@@ -1,79 +1,84 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # ==========================================
-# UV (Python Environment Manager) Installer
-# Astral: https://docs.astral.sh/uv/
+# UV (Python Environment Manager) Setup
+# Installs uv plus Python tools (ty, ruff)
+# https://docs.astral.sh/uv/
 # ==========================================
 
 set -e
 
-echo "------------------------------------------"
-echo "UV Installation & Setup"
-echo "------------------------------------------"
+# Color codes for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
 
-echo "[1/4] Cleaning up legacy pip installations..."
-# The official installer handles overwriting existing binaries gracefully,
-# but we remove pip-installed versions to prevent PATH conflicts.
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}UV (Python Environment Manager) Setup${NC}"
+echo -e "${BLUE}========================================${NC}"
+
+# ==========================================
+# 1. REMOVE LEGACY PIP INSTALLS
+# ==========================================
+echo -e "\n${BLUE}[1/3] Cleaning up legacy pip installations...${NC}"
 if pip list 2>/dev/null | grep -q "^uv "; then
-    echo "  Removing UV installed via pip..."
-    pip uninstall uv -y 2>/dev/null || true
+	echo -e "${YELLOW}⚠️  Removing uv installed via pip...${NC}"
+	pip uninstall uv -y 2>/dev/null || true
 else
-    echo "  No pip installations found."
+	echo -e "${GREEN}✅ No pip-managed uv found.${NC}"
 fi
 
-echo ""
-echo "[2/4] Installing UV..."
-# Download and run the official installer.
-# This places binaries in ~/.local/bin. Shell PATH/rc configuration is managed
-# separately by the user's dotfiles, so we tell the installer not to modify any
-# shell rc files.
+# ==========================================
+# 2. INSTALL UV
+# ==========================================
+echo -e "\n${BLUE}[2/3] Installing uv...${NC}"
+# Binaries land in ~/.local/bin. Shell PATH is managed by dotfiles,
+# so the installer is told not to touch any rc files.
 if curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh; then
-    echo "✅  UV installation script executed successfully."
+	echo -e "${GREEN}✅ uv installed to ~/.local/bin${NC}"
 else
-    echo "❌  Failed to run UV installation script."
-    exit 1
+	echo -e "${RED}❌ Failed to run the uv installer.${NC}"
+	exit 1
 fi
 
-# Add ~/.local/bin to the current script's PATH so the remaining commands work
 export PATH="$HOME/.local/bin:$PATH"
 
-echo ""
-echo "[3/4] Installing UV Tools..."
-# Verify uv command is available in the current session
-if command -v uv &> /dev/null; then
-    
-    # Install tools using the modern `uv tool install` command
-    echo "  Installing 'ty' tool..."
-    if uv tool install ty; then
-        echo "  ✅  ty installed"
-    else
-        echo "  ⚠️  Failed to install ty"
-    fi
-    
-    echo "  Installing 'ruff' tool..."
-    if uv tool install ruff; then
-        echo "  ✅  ruff installed"
-    else
-        echo "  ⚠️  Failed to install ruff"
-    fi
-    
-else
-    echo "  ❌  UV binary not found in PATH. Installation may have failed."
-    exit 1
+# ==========================================
+# 3. INSTALL PYTHON TOOLS
+# ==========================================
+echo -e "\n${BLUE}[3/3] Installing Python tools...${NC}"
+
+if ! command -v uv &>/dev/null; then
+	echo -e "${RED}❌ uv binary not found in PATH. Installation may have failed.${NC}"
+	exit 1
 fi
 
-echo ""
-echo "[4/4] Verification Report"
-echo "------------------------------------------"
+for tool in ty ruff; do
+	if uv tool install "$tool"; then
+		echo -e "${GREEN}✅ $tool installed${NC}"
+	else
+		echo -e "${YELLOW}⚠️  Failed to install $tool${NC}"
+	fi
+done
+
+# ==========================================
+# VERIFICATION REPORT
+# ==========================================
+echo -e "\n${BLUE}========================================${NC}"
+echo -e "${BLUE}Verification Report${NC}"
+echo -e "${BLUE}========================================${NC}"
 
 verify_tool() {
-    local name=$1
-    if command -v "$name" &> /dev/null; then
-        local version=$($name --version 2>&1 | head -n 1)
-        echo "✅  $name: FOUND ($version)"
-    else
-        echo "❌  $name: NOT FOUND"
-    fi
+	local name=$1
+	if command -v "$name" &>/dev/null; then
+		local version
+		version=$($name --version 2>&1 | head -n 1)
+		echo -e "${GREEN}✅ $name: found ($version)${NC}"
+	else
+		echo -e "${RED}❌ $name: not found${NC}"
+	fi
 }
 
 verify_tool "uv"
@@ -81,12 +86,7 @@ verify_tool "uvx"
 verify_tool "ty"
 verify_tool "ruff"
 
-echo "------------------------------------------"
-echo ""
-echo "Installation Summary:"
-echo "  • UV and tools have been installed to: ~/.local/bin"
-echo "  • Shell PATH integration is managed by your dotfiles."
-echo ""
-echo "Note: To use these tools in your current terminal session, run:"
-echo "  exec \$SHELL  OR simply open a new terminal."
-echo "=========================================="
+echo -e "\n${BLUE}========================================${NC}"
+echo -e "${GREEN}✅ UV setup complete!${NC}"
+echo -e "${YELLOW}Note:${NC} Run 'exec \$SHELL' (or open a new terminal) to use these tools."
+echo -e "${BLUE}========================================${NC}"

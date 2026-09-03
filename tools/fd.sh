@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # ==========================================
 # fd Verification Script
@@ -19,16 +19,16 @@ echo -e "${BLUE}========================================${NC}"
 
 echo -e "\n${BLUE}Verifying fd installation...${NC}"
 
-if command -v fd &> /dev/null; then
-    FD_PATH=$(command -v fd)
-    FD_VER=$(fd --version | head -n 1)
-    echo -e "${GREEN}✅ fd found at: $FD_PATH${NC}"
-    echo -e "${GREEN}✅ $FD_VER${NC}"
-    echo -e "\n${BLUE}========================================${NC}"
-    echo -e "${GREEN}✅ fd is ready!${NC}"
-    echo -e "${YELLOW}Usage tip:${NC} Use 'fd <pattern>' instead of find for faster and simpler searches"
-    echo -e "${BLUE}========================================${NC}"
+if command -v fd &>/dev/null; then
+	FD_PATH=$(command -v fd)
+	FD_VER=$(fd --version | head -n 1)
+	echo -e "${GREEN}✅ fd found at: $FD_PATH${NC}"
+	echo -e "${GREEN}✅ $FD_VER${NC}"
+	echo -e "\n${BLUE}========================================${NC}"
+	echo -e "${GREEN}✅ fd is ready!${NC}"
+	echo -e "${YELLOW}Usage tip:${NC} Use 'fd <pattern>' instead of find for faster and simpler searches"
+	echo -e "${BLUE}========================================${NC}"
 else
-    echo -e "${RED}❌ fd not found. Please install 'fd' via pacman.${NC}"
-    exit 1
+	echo -e "${RED}❌ fd not found. Please install 'fd' via pacman.${NC}"
+	exit 1
 fi

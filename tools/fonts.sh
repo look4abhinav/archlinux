@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # ==========================================
 # Nerd Fonts Setup Script
@@ -24,35 +24,39 @@ echo -e "${BLUE}========================================${NC}"
 echo -e "\n${BLUE}Checking for ${FONT_NAME} Nerd Font...${NC}"
 
 # Check if the font is registered in the font cache
+if ! command -v fc-list &>/dev/null; then
+	echo -e "${BLUE}fontconfig not found. Installing...${NC}"
+	sudo pacman -S --needed --noconfirm fontconfig
+fi
+
 if fc-list | grep -iq "$FONT_NAME"; then
-    echo -e "${GREEN}✅ $FONT_NAME Nerd Font is already installed.${NC}"
+	echo -e "${GREEN}✅ $FONT_NAME Nerd Font is already installed.${NC}"
 else
-    echo -e "${YELLOW}⚠️  Font not found. Downloading and installing...${NC}"
-    
-    # Ensure font directory exists
-    mkdir -p "$FONT_DIR"
-    
-    # Create temp directory for download/extraction
-    TMP_DIR=$(mktemp -d)
-    cd "$TMP_DIR"
-    
-    echo -e "${BLUE}Downloading $FONT_NAME from GitHub...${NC}"
-    if wget -q --show-progress "$FONT_URL" -O "${FONT_NAME}.zip"; then
-        echo -e "${BLUE}Extracting fonts...${NC}"
-        unzip -q "${FONT_NAME}.zip" -d "$FONT_DIR"
-        
-        echo -e "${BLUE}Updating font cache...${NC}"
-        fc-cache -fv &> /dev/null
-        
-        echo -e "${GREEN}✅ $FONT_NAME Nerd Font installed successfully!${NC}"
-    else
-        echo -e "${RED}❌ Failed to download font.${NC}"
-        rm -rf "$TMP_DIR"
-        exit 1
-    fi
-    
-    # Cleanup
-    rm -rf "$TMP_DIR"
+	echo -e "${YELLOW}⚠️  Font not found. Downloading and installing...${NC}"
+
+	# Ensure font directory exists
+	mkdir -p "$FONT_DIR"
+
+	# Create temp directory for download
+	TMP_DIR=$(mktemp -d)
+
+	echo -e "${BLUE}Downloading $FONT_NAME from GitHub...${NC}"
+	if wget -q --show-progress "$FONT_URL" -O "$TMP_DIR/${FONT_NAME}.zip"; then
+		echo -e "${BLUE}Extracting fonts...${NC}"
+		unzip -q -j "$TMP_DIR/${FONT_NAME}.zip" "*.ttf" -d "$FONT_DIR"
+
+		echo -e "${BLUE}Updating font cache...${NC}"
+		fc-cache -f &>/dev/null
+
+		echo -e "${GREEN}✅ $FONT_NAME Nerd Font installed successfully!${NC}"
+	else
+		echo -e "${RED}❌ Failed to download font.${NC}"
+		rm -rf "$TMP_DIR"
+		exit 1
+	fi
+
+	# Cleanup
+	rm -rf "$TMP_DIR"
 fi
 
 echo -e "\n${BLUE}========================================${NC}"

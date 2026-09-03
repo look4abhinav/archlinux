@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # ==========================================
 # Bat Verification Script
@@ -20,16 +20,16 @@ echo -e "${BLUE}========================================${NC}"
 
 echo -e "\n${BLUE}Verifying bat installation...${NC}"
 
-if command -v bat &> /dev/null; then
-    BAT_PATH=$(command -v bat)
-    BAT_VER=$(bat --version | head -n 1)
-    echo -e "${GREEN}✅ Bat found at: $BAT_PATH${NC}"
-    echo -e "${GREEN}✅ $BAT_VER${NC}"
-    echo -e "\n${BLUE}========================================${NC}"
-    echo -e "${GREEN}✅ Bat is ready!${NC}"
-    echo -e "${YELLOW}Integration:${NC} Used as the syntax-highlighting previewer for fzf"
-    echo -e "${BLUE}========================================${NC}"
+if command -v bat &>/dev/null; then
+	BAT_PATH=$(command -v bat)
+	BAT_VER=$(bat --version | head -n 1)
+	echo -e "${GREEN}✅ Bat found at: $BAT_PATH${NC}"
+	echo -e "${GREEN}✅ $BAT_VER${NC}"
+	echo -e "\n${BLUE}========================================${NC}"
+	echo -e "${GREEN}✅ Bat is ready!${NC}"
+	echo -e "${YELLOW}Integration:${NC} Used as the syntax-highlighting previewer for fzf"
+	echo -e "${BLUE}========================================${NC}"
 else
-    echo -e "${RED}❌ Bat not found. Please install 'bat' via pacman.${NC}"
-    exit 1
+	echo -e "${RED}❌ Bat not found. Please install 'bat' via pacman.${NC}"
+	exit 1
 fi

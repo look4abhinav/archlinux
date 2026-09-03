@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # ==========================================
 # Eza Verification Script
@@ -20,16 +20,16 @@ echo -e "${BLUE}========================================${NC}"
 
 echo -e "\n${BLUE}Verifying eza installation...${NC}"
 
-if command -v eza &> /dev/null; then
-    EZA_PATH=$(command -v eza)
-    EZA_VER=$(eza --version)
-    echo -e "${GREEN}✅ Eza found at: $EZA_PATH${NC}"
-    echo -e "${GREEN}✅ $EZA_VER${NC}"
-    echo -e "\n${BLUE}========================================${NC}"
-    echo -e "${GREEN}✅ Eza is installed!${NC}"
-    echo -e "${BLUE}Aliases (ls, ll, la, lt) are managed by dotfiles${NC}"
-    echo -e "${BLUE}========================================${NC}"
+if command -v eza &>/dev/null; then
+	EZA_PATH=$(command -v eza)
+	EZA_VER=$(eza --version)
+	echo -e "${GREEN}✅ Eza found at: $EZA_PATH${NC}"
+	echo -e "${GREEN}✅ $EZA_VER${NC}"
+	echo -e "\n${BLUE}========================================${NC}"
+	echo -e "${GREEN}✅ Eza is installed!${NC}"
+	echo -e "${BLUE}Aliases (ls, ll, la, lt) are managed by dotfiles${NC}"
+	echo -e "${BLUE}========================================${NC}"
 else
-    echo -e "${RED}❌ Eza not found. Please install it via pacman first.${NC}"
-    exit 1
+	echo -e "${RED}❌ Eza not found. Please install it via pacman first.${NC}"
+	exit 1
 fi
