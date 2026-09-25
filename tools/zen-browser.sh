@@ -1,35 +1,36 @@
 #!/usr/bin/env bash
 
-# ==========================================
-# Zen Browser Setup Script
-# Installs zen-browser-bin via AUR
-# ==========================================
+set -Eeuo pipefail
 
-set -e
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../lib/common.sh"
 
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+require_non_root
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Zen Browser Setup${NC}"
-echo -e "${BLUE}========================================${NC}"
+verify_zen_browser() {
+	local version
 
-if command -v zen-browser &>/dev/null; then
-	echo -e "${GREEN}✅ Zen Browser is already installed.${NC}"
-else
-	echo -e "${YELLOW}⚠️  Zen Browser not found. Installing via paru...${NC}"
-	if command -v paru &>/dev/null; then
-		paru -S --noconfirm zen-browser-bin
-		echo -e "${GREEN}✅ Zen Browser installed successfully!${NC}"
-	else
-		echo -e "${RED}❌ Paru is required but not installed.${NC}"
-		exit 1
+	command -v zen-browser >/dev/null 2>&1 || die 'The zen-browser binary was not found after installation.'
+	if ! version=$(zen-browser --version 2>&1); then
+		die 'The zen-browser binary exists but cannot be executed.'
 	fi
-fi
+	[[ -n $version ]] || die 'zen-browser returned no version information.'
+	print_success "zen-browser: ${version%%$'\n'*}"
+}
 
-echo -e "\n${BLUE}========================================${NC}"
-echo -e "${GREEN}✅ Zen Browser setup complete!${NC}"
-echo -e "${BLUE}========================================${NC}"
+print_section 'Zen Browser setup'
+
+if command -v zen-browser >/dev/null 2>&1; then
+	verify_zen_browser
+else
+	require_command paru
+
+	print_status 'Installing zen-browser-bin'
+	if ! paru -S --needed --noconfirm zen-browser-bin; then
+		die 'Failed to install zen-browser-bin.'
+	fi
+
+	verify_zen_browser
+	print_success 'Zen Browser setup complete.'
+fi

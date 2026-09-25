@@ -1,46 +1,34 @@
 #!/usr/bin/env bash
 
-# ==========================================
-# Git Configuration Script
-# Applies global performance improvements
-# ==========================================
+set -Eeuo pipefail
 
-set -e
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../lib/common.sh"
 
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+require_non_root
+require_commands git gh
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Git Global Configuration${NC}"
-echo -e "${BLUE}========================================${NC}"
+CONFIG_FILE="$HOME/.gitconfig"
+IDENTITY_KEYS=(user.name user.email)
 
-echo -e "\n${BLUE}Applying Git performance and workflow settings...${NC}"
+print_section 'Git verification'
+verify_command git --version
+verify_command gh --version
+[[ -f $CONFIG_FILE ]] || die "Stowed Git configuration not found: $CONFIG_FILE"
 
-# Git Configuration for General Performance Improvement
-git config --global core.preloadindex true
-git config --global core.fsmonitor true
-git config --global core.untrackedcache true
-git config --global gc.auto 8000
-git config --global pack.threads "0"
-git config --global pack.windowMemory "1g"
-git config --global pack.packSizeLimit "512m"
-git config --global rebase.autoStash true
-git config --global merge.autoStash true
-git config --global push.default current
-git config --global push.autoSetupRemote true
-git config --global fetch.prune true
-git config --global fetch.pruneTags true
-git config --global branch.sort -committerdate
-git config --global diff.algorithm histogram
-git config --global help.autoCorrect prompt
+for key in "${IDENTITY_KEYS[@]}"; do
+	if ! value=$(git config --file "$CONFIG_FILE" --get "$key" 2>/dev/null); then
+		die "Missing $key in $CONFIG_FILE"
+	fi
+	[[ -n $value ]] || die "Empty $key in $CONFIG_FILE"
+	print_success "Git config verified: $key"
+done
 
-# Aliases: (optional, recommended for workflow speed)
-git config --global alias.st "status -s"
-git config --global alias.ci "commit"
-git config --global alias.co "checkout"
-git config --global alias.br "branch"
-git config --global alias.lg "log --oneline --graph"
-
-echo -e "${GREEN}✅ Git configuration applied successfully!${NC}"
-echo -e "${BLUE}========================================${NC}"
+if gh auth status >/dev/null 2>&1; then
+	print_success 'GitHub CLI is authenticated.'
+else
+	print_warning 'GitHub CLI is not authenticated.'
+	print_status 'Run once: gh auth login'
+fi
+print_success 'Git verification complete.'

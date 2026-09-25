@@ -1,269 +1,261 @@
 #!/usr/bin/env bash
 
-# ==========================================
-# Arch Linux Development Setup Script
-# Installs and configures development tools
-# ==========================================
+set -Eeuo pipefail
 
-set -e
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/common.sh"
 
-# Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-# Script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TOOLS_DIR="$SCRIPT_DIR/tools"
 
-# ==========================================
-# HELPER FUNCTIONS
-# ==========================================
-
-# Check if a command exists
-cmd_exists() {
-	command -v "$1" &>/dev/null
-}
-
-# Check if a pacman package is installed
-pkg_installed() {
-	pacman -Q "$1" &>/dev/null
-}
-
-# Print status message
-print_status() {
-	echo -e "${BLUE}[*]${NC} $1"
-}
-
-# Print success message
-print_success() {
-	echo -e "${GREEN}[✓]${NC} $1"
-}
-
-# Print warning message
-print_warning() {
-	echo -e "${YELLOW}[!]${NC} $1"
-}
-
-# Print error message
-print_error() {
-	echo -e "${RED}[✗]${NC} $1"
-}
-
-# Run a tool script if it exists
-run_tool_script() {
-	local script_name="$1"
-	local script_path="$TOOLS_DIR/$script_name.sh"
-
-	if [ ! -f "$script_path" ]; then
-		print_warning "Tool script not found: $script_path"
-		return 1
-	fi
-
-	echo -e "\n${BLUE}========================================${NC}"
-	bash "$script_path"
-	echo -e "${BLUE}========================================${NC}"
-}
-
-# ==========================================
-# MAIN SETUP
-# ==========================================
+require_non_root
+require_tty
+require_command pacman
+require_command sudo
+require_command mktemp
+require_command rm
+require_command cat
 
 SECONDS=0
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Arch Linux Development Setup${NC}"
-echo -e "${BLUE}========================================${NC}"
+validate_unique() {
+	local label=$1
+	shift
+	local item
+	local -A seen=()
 
-# Prevent running as root (makepkg in paru.sh will fail, and dotfiles shouldn't be root)
-if [ "$EUID" -eq 0 ]; then
-	print_error "Please do not run this script as root."
-	echo "Run it as your normal user. The script will prompt for sudo when necessary."
-	exit 1
-fi
+	for item in "$@"; do
+		if [[ -n ${seen[$item]:-} ]]; then
+			die "$label contains duplicate entry: $item"
+		fi
+		seen["$item"]=1
+	done
+}
 
-if ! cmd_exists pacman; then
-	print_error "pacman not found. This setup is for Arch Linux only."
-	exit 1
-fi
+validate_tools() {
+	local label=$1
+	shift
+	local tool
 
-# ==========================================
-# STEP 1: SYSTEM UPDATE
-# ==========================================
-# A full sync now keeps every later install consistent (no partial upgrades,
-# no 404s from stale databases) and provides fresh databases for 'dialog'.
-echo -e "\n${BLUE}[1/3] Refreshing databases and updating system...${NC}"
-sudo pacman -Syu --noconfirm
-print_success "System is up to date"
+	for tool in "$@"; do
+		[[ $tool =~ ^[a-z0-9][a-z0-9-]*$ ]] ||
+			die "$label contains invalid tool name: $tool"
+		[[ -n ${KNOWN_TOOL_LOOKUP[$tool]:-} ]] ||
+			die "$label contains unknown tool: $tool"
+		[[ -f "$TOOLS_DIR/$tool.sh" ]] ||
+			die "Tool script not found: $tool"
+	done
+}
 
-# dialog powers the interactive menu below
-if ! cmd_exists dialog; then
-	print_status "Installing dialog for interactive menu..."
-	sudo pacman -S --needed --noconfirm dialog
-fi
-
-# ==========================================
-# SETUP PROFILES
-# ==========================================
-
-# Every package this setup can install
-ALL_PACKAGES=(
-	# Desktop environment (Wayland)
+PC_PACKAGES=(
+	base-devel
+	bat
+	btop
+	curl
+	dialog
+	docker
+	docker-compose
+	eza
+	fd
+	ffmpegthumbnailer
+	fzf
+	github-cli
+	git
+	htop
+	jq
+	less
+	neovim
+	openssh
+	poppler
+	python
+	ripgrep
+	ruff
+	shfmt
+	shellcheck
+	stow
+	stylua
+	taplo-cli
+	tmux
+	tree-sitter-cli
+	ty
+	uv
+	yamlfmt
+	yazi
+	zoxide
+	zsh
+	bluez
+	bluez-utils
+	bluetui
+	brightnessctl
+	cliphist
+	code
+	fontconfig
+	fuzzel
+	ghostty
+	grim
+	hypridle
+	hyprlock
+	hyprpaper
 	hyprland
-	xdg-desktop-portal-hyprland
+	inter-font
+	kanshi
+	libnotify
+	mako
+	networkmanager
+	pavucontrol
+	pipewire-pulse
+	polkit-kde-agent
+	qt5ct
 	qt5-wayland
 	qt6-wayland
 	sddm
-	ghostty
-	waybar
-	fuzzel
-	mako
-	hyprpaper
-	hyprlock
-	hypridle
-	grim
+	signal-desktop
 	slurp
+	thunar
+	ttf-jetbrains-mono-nerd
+	waybar
+	weston
 	wl-clipboard
-	cliphist
-	brightnessctl
-	polkit-kde-agent
-
-	# Terminal & development
-	yazi
-	ffmpegthumbnailer
-	poppler
-	fd
-	ttf-jetbrains-mono
-	ttf-nerd-fonts-symbols-common
-	base-devel
-	git
-	neovim
-	tmux
-	zoxide
-	eza
-	fzf
-	stow
-	docker
-	docker-compose
-	tree-sitter-cli
-	stylua
-	taplo-cli
-	yamlfmt
-	shfmt
-	shellcheck
-	ripgrep
-	bat
-	btop
-
-	# Required by fonts.sh
-	wget
-	unzip
+	wireplumber
+	wtype
+	xdg-desktop-portal-hyprland
+	xdg-utils
+	zed
 )
 
-# Server profile: terminal & development only (no GUI, no fonts)
 SERVER_PACKAGES=(
 	base-devel
-	git
-	docker
-	docker-compose
-	neovim
-	tmux
-	zoxide
-	eza
-	fzf
-	fd
-	ripgrep
 	bat
 	btop
-	yazi
-	ffmpegthumbnailer
-	poppler
-	tree-sitter-cli
-	stylua
-	taplo-cli
-	yamlfmt
+	dialog
+	docker
+	docker-compose
+	eza
+	fd
+	fzf
+	github-cli
+	git
+	htop
+	less
+	neovim
+	openssh
+	python
+	ripgrep
+	ruff
 	shfmt
 	shellcheck
 	stow
+	stylua
+	taplo-cli
+	tmux
+	tree-sitter-cli
+	ty
+	uv
+	yamlfmt
+	yazi
+	zoxide
+	zsh
 )
 
-# Order of execution for tool configuration scripts
-TOOL_ORDER=(
-	"base-devel"
-	"paru"
-	"wayland"
-	"zen-browser"
-	"yazi"
-	"git"
-	"docker"
-	"neovim"
-	"tree-sitter-cli"
-	"tmux"
-	"uv"
-	"zoxide"
-	"eza"
-	"fzf"
-	"ripgrep"
-	"bat"
-	"fd"
-	"btop"
-	"fonts"
-	"stow"
+PC_TOOLS=(
+	base-devel
+	paru
+	tmux
+	stow
+	tmux-plugins
+	zsh
+	git
+	neovim
+	wayland
+	services
+	fonts
+	uv
+	docker
+	zen-browser
+	tree-sitter-cli
+	zoxide
+	eza
+	fzf
+	ripgrep
+	bat
+	fd
+	btop
+	yazi
 )
 
-# Server profile tools: no wayland, no zen-browser, no fonts
 SERVER_TOOLS=(
-	"base-devel"
-	"paru"
-	"yazi"
-	"git"
-	"docker"
-	"neovim"
-	"tree-sitter-cli"
-	"tmux"
-	"uv"
-	"zoxide"
-	"eza"
-	"fzf"
-	"ripgrep"
-	"bat"
-	"fd"
-	"btop"
-	"stow"
+	base-devel
+	tmux
+	stow
+	tmux-plugins
+	zsh
+	git
+	neovim
+	services
+	uv
+	docker
+	tree-sitter-cli
+	zoxide
+	eza
+	fzf
+	ripgrep
+	bat
+	fd
+	btop
+	yazi
 )
 
-# Fail fast on profile typos instead of breaking pacman mid-install
-declare -A PKG_LOOKUP=()
-declare -A TOOL_LOOKUP=()
-for pkg in "${ALL_PACKAGES[@]}"; do
-	PKG_LOOKUP["$pkg"]=1
-done
-for tool in "${TOOL_ORDER[@]}"; do
-	TOOL_LOOKUP["$tool"]=1
-done
-for pkg in "${SERVER_PACKAGES[@]}"; do
-	if [ -z "${PKG_LOOKUP[$pkg]:-}" ]; then
-		print_error "SERVER_PACKAGES contains unknown package: $pkg"
-		exit 1
-	fi
-done
-for tool in "${SERVER_TOOLS[@]}"; do
-	if [ -z "${TOOL_LOOKUP[$tool]:-}" ]; then
-		print_error "SERVER_TOOLS contains unknown tool: $tool"
-		exit 1
-	fi
+KNOWN_TOOLS=(
+	base-devel
+	paru
+	tmux
+	stow
+	tmux-plugins
+	zsh
+	git
+	neovim
+	wayland
+	services
+	fonts
+	uv
+	docker
+	zen-browser
+	tree-sitter-cli
+	zoxide
+	eza
+	fzf
+	ripgrep
+	bat
+	fd
+	btop
+	yazi
+)
+
+declare -A KNOWN_TOOL_LOOKUP=()
+for tool in "${KNOWN_TOOLS[@]}"; do
+	KNOWN_TOOL_LOOKUP["$tool"]=1
 done
 
-# ==========================================
-# INTERACTIVE TUI SETUP
-# ==========================================
+validate_unique 'PC_PACKAGES' "${PC_PACKAGES[@]}"
+validate_unique 'SERVER_PACKAGES' "${SERVER_PACKAGES[@]}"
+validate_unique 'PC_TOOLS' "${PC_TOOLS[@]}"
+validate_unique 'SERVER_TOOLS' "${SERVER_TOOLS[@]}"
+validate_unique 'KNOWN_TOOLS' "${KNOWN_TOOLS[@]}"
+validate_tools 'PC_TOOLS' "${PC_TOOLS[@]}"
+validate_tools 'SERVER_TOOLS' "${SERVER_TOOLS[@]}"
 
-# Create a modern dark theme for dialog (private temp file, removed on exit)
+print_section 'System bootstrap'
+print_status 'Refreshing the system and ensuring dialog is installed'
+sudo pacman -Syu --needed --noconfirm dialog
+require_command dialog
+print_success 'System bootstrap completed'
+
 DIALOGRC=$(mktemp)
 export DIALOGRC
-trap 'rm -f "$DIALOGRC"' EXIT
+cleanup_dialog() {
+	rm -f -- "$DIALOGRC"
+}
+trap cleanup_dialog EXIT
 
 cat <<'EOF' >"$DIALOGRC"
 use_shadow = ON
@@ -292,125 +284,82 @@ uarrow_color = (GREEN,BLACK,ON)
 darrow_color = (GREEN,BLACK,ON)
 EOF
 
-# ==========================================
-# PROFILE SELECTION
-# ==========================================
-set +e
-PROFILE=$(dialog --backtitle "✨ Arch Linux Developer Setup ✨" \
-	--title " 🖥️  Setup Profile " \
+print_section 'Profile selection'
+if PROFILE=$(dialog --backtitle 'Arch Linux setup' \
+	--title 'Setup profile' \
 	--colors \
-	--menu "What kind of machine is this?\n\nPC installs the full desktop, Server stays headless." 14 62 2 \
-	"pc" "Full desktop  - Hyprland, SDDM + all dev tools" \
-	"server" "Headless      - terminal & dev tools, no GUI" \
-	3>&1 1>&2 2>&3)
-exit_status=$?
-set -e
-if [ $exit_status -ne 0 ]; then
-	clear
-	print_warning "Setup cancelled by user."
-	exit 0
+	--menu 'What kind of machine is this?\n\nPC installs the desktop. Server stays headless.' 14 62 2 \
+	'pc' 'Full desktop - Hyprland, SDDM, and development tools' \
+	'server' 'Headless - terminal and development tools' \
+	3>&1 1>&2 2>&3); then
+	:
+else
+	print_warning 'Setup cancelled by user.'
+	exit 1
 fi
 
 case "$PROFILE" in
-pc)
-	SELECTED_PKG_ARRAY=("${ALL_PACKAGES[@]}")
-	SELECTED_TOOL_ARRAY=("${TOOL_ORDER[@]}")
-	PROFILE_LABEL="PC (full desktop)"
-	;;
-server)
-	SELECTED_PKG_ARRAY=("${SERVER_PACKAGES[@]}")
-	SELECTED_TOOL_ARRAY=("${SERVER_TOOLS[@]}")
-	PROFILE_LABEL="Server (headless)"
-	;;
+	pc)
+		SELECTED_PACKAGES=("${PC_PACKAGES[@]}")
+		SELECTED_TOOLS=("${PC_TOOLS[@]}")
+		PROFILE_LABEL='PC (full desktop)'
+		;;
+	server)
+		SELECTED_PACKAGES=("${SERVER_PACKAGES[@]}")
+		SELECTED_TOOLS=("${SERVER_TOOLS[@]}")
+		PROFILE_LABEL='Server (headless)'
+		;;
+	*)
+		die 'Invalid profile selection.'
+		;;
 esac
 
-# Confirm before pulling the trigger
-set +e
-dialog --backtitle "✨ Arch Linux Developer Setup ✨" \
-	--title " ${PROFILE_LABEL} " \
+export SETUP_PROFILE="$PROFILE"
+
+print_section 'Confirmation'
+if dialog --backtitle 'Arch Linux setup' \
+	--title "$PROFILE_LABEL" \
 	--colors \
-	--yesno "This will install ${#SELECTED_PKG_ARRAY[@]} pacman packages\nand run ${#SELECTED_TOOL_ARRAY[@]} tool configuration scripts.\n\nProceed with installation?" 12 56
-exit_status=$?
-set -e
-if [ $exit_status -ne 0 ]; then
-	clear
-	print_warning "Setup cancelled by user."
-	exit 0
+	--yesno "This will install ${#SELECTED_PACKAGES[@]} pacman packages and run ${#SELECTED_TOOLS[@]} tool scripts.\n\nProceed?" 12 56; then
+	:
+else
+	print_warning 'Setup cancelled by user.'
+	exit 1
 fi
 
-clear
-print_status "Profile: ${PROFILE_LABEL} - ${#SELECTED_PKG_ARRAY[@]} packages, ${#SELECTED_TOOL_ARRAY[@]} tools"
+print_status "Profile: $PROFILE_LABEL"
 
-# ==========================================
-# STEP 2: INSTALL PACMAN PACKAGES
-# ==========================================
-echo -e "\n${BLUE}[2/3] Installing pacman packages...${NC}"
+print_section 'Package installation'
+print_status "Installing ${#SELECTED_PACKAGES[@]} packages with pacman"
+sudo pacman -S --needed --noconfirm "${SELECTED_PACKAGES[@]}"
+print_success 'Selected pacman packages installed'
 
-PACKAGES_TO_INSTALL=()
-
-for pkg in "${SELECTED_PKG_ARRAY[@]}"; do
-	if pkg_installed "$pkg"; then
-		print_success "$pkg: already installed"
+print_section 'Tool configuration'
+FAILED_TOOLS=()
+for tool in "${SELECTED_TOOLS[@]}"; do
+	print_section "$tool"
+	if bash "$TOOLS_DIR/$tool.sh"; then
+		print_success "$tool completed"
 	else
-		PACKAGES_TO_INSTALL+=("$pkg")
-		print_warning "$pkg: will be installed"
+		tool_status=$?
+		print_error "$tool failed with status $tool_status"
+		FAILED_TOOLS+=("$tool")
 	fi
 done
 
-if [ ${#PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
-	print_status "Installing ${#PACKAGES_TO_INSTALL[@]} package(s)..."
-	sudo pacman -S --needed --noconfirm "${PACKAGES_TO_INSTALL[@]}"
-	print_success "Pacman packages installed"
-else
-	print_success "All ${#SELECTED_PKG_ARRAY[@]} selected package(s) already installed"
-fi
-
-# ==========================================
-# STEP 3: RUN TOOL CONFIGURATION SCRIPTS
-# ==========================================
-echo -e "\n${BLUE}[3/3] Running tool configuration scripts...${NC}"
-
-# Fast O(1) lookup of which tools the profile selected
-declare -A SELECTED_TOOL_SET=()
-for tool in "${SELECTED_TOOL_ARRAY[@]}"; do
-	SELECTED_TOOL_SET["$tool"]=1
-done
-
-FAILED_SCRIPTS=()
-
-for script in "${TOOL_ORDER[@]}"; do
-	if [ -n "${SELECTED_TOOL_SET[$script]:-}" ]; then
-		if run_tool_script "$script"; then
-			print_success "$script: completed"
-		else
-			print_error "$script: failed or skipped"
-			FAILED_SCRIPTS+=("$script")
-		fi
-	fi
-done
-
-# ==========================================
-# SUMMARY
-# ==========================================
-echo -e "\n${BLUE}========================================${NC}"
-echo -e "${BLUE}Setup Summary${NC}"
-echo -e "${BLUE}========================================${NC}"
-
-if [ ${#FAILED_SCRIPTS[@]} -eq 0 ]; then
-	echo -e "${GREEN}✅ All ${#SELECTED_TOOL_ARRAY[@]} tool script(s) completed successfully!${NC}"
-else
-	echo -e "${YELLOW}⚠️  ${#FAILED_SCRIPTS[@]}/${#SELECTED_TOOL_ARRAY[@]} tool script(s) had issues:${NC}"
-	for script in "${FAILED_SCRIPTS[@]}"; do
-		echo -e "  ${YELLOW}-${NC} $script"
+print_section 'Setup summary'
+total_tools=${#SELECTED_TOOLS[@]}
+failed_count=${#FAILED_TOOLS[@]}
+successful_count=$((total_tools - failed_count))
+print_status "Tools completed: $successful_count/$total_tools"
+if ((failed_count > 0)); then
+	print_error "Setup failed: $failed_count tool script(s) failed."
+	for tool in "${FAILED_TOOLS[@]}"; do
+		print_error "Failed tool: $tool"
 	done
+	exit 1
 fi
 
-echo -e "\n${YELLOW}Next steps:${NC}"
-echo "  1. Reload your shell: exec \$SHELL"
-echo "  2. Verify key tools: command -v git nvim tmux paru docker uv rg fd eza bat btop shfmt shellcheck"
-echo "  3. Check dotfiles: ls -la ~/"
-echo "  4. Activate Docker permissions: newgrp docker"
-
-echo -e "\n${BLUE}========================================${NC}"
-echo -e "${GREEN}Setup complete in $((SECONDS / 60))m $((SECONDS % 60))s!${NC}"
-echo -e "${BLUE}========================================${NC}"
+print_success "Setup completed in $((SECONDS / 60))m $((SECONDS % 60))s"
+print_status "Reload your shell with: exec \$SHELL"
+print_status 'Activate Docker permissions with: newgrp docker'

@@ -1,51 +1,55 @@
 #!/usr/bin/env bash
 
-# ==========================================
-# Paru Setup & Verification Script
-# Installs the Paru AUR helper
-# ==========================================
+set -Eeuo pipefail
 
-set -e
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../lib/common.sh"
 
-# Color codes for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+require_non_root
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Paru (AUR Helper) Setup${NC}"
-echo -e "${BLUE}========================================${NC}"
+verify_paru() {
+	local version
 
-echo -e "\n${BLUE}Checking for Paru installation...${NC}"
+	command -v paru >/dev/null 2>&1 || die 'The paru binary was not found after installation.'
+	if ! version=$(paru --version 2>&1); then
+		die 'The paru binary exists but cannot be executed.'
+	fi
+	[[ -n $version ]] || die 'paru returned no version information.'
+	print_success "paru: ${version%%$'\n'*}"
+}
 
-if command -v paru &>/dev/null; then
-	PARU_PATH=$(command -v paru)
-	PARU_VER=$(paru --version | head -n 1)
-	echo -e "${GREEN}✅ Paru found at: $PARU_PATH${NC}"
-	echo -e "${GREEN}✅ $PARU_VER${NC}"
+cleanup_build() {
+	rm -rf -- "$BUILD_DIR"
+}
+
+print_section 'Paru setup'
+
+if command -v paru >/dev/null 2>&1; then
+	verify_paru
 else
-	echo -e "${YELLOW}⚠️  Paru not found. Building from AUR...${NC}"
+	require_commands git makepkg pacman mktemp rm
+	require_package base-devel
 
-	# Create a temporary build directory
 	BUILD_DIR=$(mktemp -d)
-	echo -e "${BLUE}Cloning into temporary directory: $BUILD_DIR${NC}"
+	trap cleanup_build EXIT
+	trap 'exit 129' HUP
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
 
-	git clone https://aur.archlinux.org/paru.git "$BUILD_DIR"
+	print_status "Cloning paru into $BUILD_DIR"
+	if ! git clone --depth 1 https://aur.archlinux.org/paru.git "$BUILD_DIR"; then
+		die 'Failed to clone the paru AUR repository.'
+	fi
 
-	# Run makepkg inside the build directory
-	cd "$BUILD_DIR"
-	echo -e "${BLUE}Building and installing paru...${NC}"
-	# -s: install dependencies, -i: install package, --noconfirm: don't prompt
-	makepkg -si --noconfirm
+	print_status 'Building and installing paru'
+	if ! (
+		cd -- "$BUILD_DIR"
+		makepkg -si --noconfirm
+	); then
+		die 'Failed to build or install paru.'
+	fi
 
-	# Cleanup
-	cd "$HOME"
-	rm -rf "$BUILD_DIR"
-
-	echo -e "${GREEN}✅ Paru built and installed successfully!${NC}"
+	verify_paru
+	print_success 'Paru setup complete.'
 fi
-
-echo -e "\n${BLUE}========================================${NC}"
-echo -e "${GREEN}✅ AUR Helper setup complete!${NC}"
-echo -e "${BLUE}========================================${NC}"

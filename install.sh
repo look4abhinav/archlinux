@@ -1,41 +1,52 @@
 #!/usr/bin/env bash
 
-# ==========================================
-# Bootstrap Installer
-# Clones the setup repo into a temp dir and runs setup.sh
-# ==========================================
+set -Eeuo pipefail
 
-set -e
+print_status() {
+	printf '[*] %s\n' "$*"
+}
 
-echo "🚀 Bootstrapping Arch Linux Setup ..."
+print_success() {
+	printf '[+] %s\n' "$*"
+}
 
-if [ "$EUID" -eq 0 ]; then
-	echo "❌ Please do not run this script as root."
-	echo "Run it as your normal user. It will prompt for sudo when necessary."
+print_error() {
+	printf '[x] %s\n' "$*" >&2
+}
+
+die() {
+	print_error "$*"
 	exit 1
-fi
+}
 
-if ! command -v pacman &>/dev/null; then
-	echo "❌ pacman not found. This installer is for Arch Linux only."
-	exit 1
-fi
+((EUID != 0)) || die 'Do not run this installer as root.'
+[[ -t 1 ]] || die 'An interactive terminal is required.'
+command -v pacman >/dev/null 2>&1 || die 'Required command not found: pacman'
+command -v mktemp >/dev/null 2>&1 || die 'Required command not found: mktemp'
+command -v rm >/dev/null 2>&1 || die 'Required command not found: rm'
 
-# Safely create a temporary directory, cleaned up even if the script fails midway
+print_status 'Bootstrapping Arch Linux setup'
+
+if ! command -v git >/dev/null 2>&1; then
+	command -v sudo >/dev/null 2>&1 || die 'Required command not found: sudo'
+	print_status 'Installing git with a full system upgrade'
+	sudo pacman -Syu --needed --noconfirm git
+fi
+command -v git >/dev/null 2>&1 || die 'Git installation failed.'
+
 INSTALL_DIR=$(mktemp -d -t arch-setup-XXXXXX)
-trap 'rm -rf -- "$INSTALL_DIR"' EXIT
+cleanup() {
+	rm -rf -- "$INSTALL_DIR"
+}
+trap cleanup EXIT
 
-if ! command -v git &>/dev/null; then
-	echo "📦 Installing git (full system refresh to avoid partial upgrades)..."
-	sudo pacman -Syu --noconfirm git
-fi
-
-echo "📥 Cloning repository into $INSTALL_DIR..."
+print_status "Cloning the setup repository into $INSTALL_DIR"
 git clone --depth 1 https://github.com/look4abhinav/archlinux.git "$INSTALL_DIR"
 
-echo "⚙️  Executing setup.sh..."
+print_status 'Running setup.sh'
 (
-	cd "$INSTALL_DIR"
+	cd -- "$INSTALL_DIR"
 	bash setup.sh
 )
 
-echo "✅ Setup complete! The temporary directory will be cleaned up automatically."
+print_success 'Setup completed successfully'

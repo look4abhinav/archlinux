@@ -1,65 +1,36 @@
 #!/usr/bin/env bash
 
-# ==========================================
-# Nerd Fonts Setup Script
-# Downloads and installs JetBrainsMono Nerd Font
-# ==========================================
+set -Eeuo pipefail
 
-set -e
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../lib/common.sh"
 
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+require_non_root
+require_packages ttf-jetbrains-mono-nerd inter-font fontconfig
+require_command fc-match
 
-FONT_NAME="JetBrainsMono"
-FONT_DIR="$HOME/.local/share/fonts"
-FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${FONT_NAME}.zip"
+CURSOR_DIR='/usr/share/icons/Bibata-Modern-Ice'
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Nerd Fonts Setup (${FONT_NAME})${NC}"
-echo -e "${BLUE}========================================${NC}"
+verify_font_family() {
+	local expected=$1
+	local matched
 
-echo -e "\n${BLUE}Checking for ${FONT_NAME} Nerd Font...${NC}"
-
-# Check if the font is registered in the font cache
-if ! command -v fc-list &>/dev/null; then
-	echo -e "${BLUE}fontconfig not found. Installing...${NC}"
-	sudo pacman -S --needed --noconfirm fontconfig
-fi
-
-if fc-list | grep -iq "$FONT_NAME"; then
-	echo -e "${GREEN}✅ $FONT_NAME Nerd Font is already installed.${NC}"
-else
-	echo -e "${YELLOW}⚠️  Font not found. Downloading and installing...${NC}"
-
-	# Ensure font directory exists
-	mkdir -p "$FONT_DIR"
-
-	# Create temp directory for download
-	TMP_DIR=$(mktemp -d)
-
-	echo -e "${BLUE}Downloading $FONT_NAME from GitHub...${NC}"
-	if wget -q --show-progress "$FONT_URL" -O "$TMP_DIR/${FONT_NAME}.zip"; then
-		echo -e "${BLUE}Extracting fonts...${NC}"
-		unzip -q -j "$TMP_DIR/${FONT_NAME}.zip" "*.ttf" -d "$FONT_DIR"
-
-		echo -e "${BLUE}Updating font cache...${NC}"
-		fc-cache -f &>/dev/null
-
-		echo -e "${GREEN}✅ $FONT_NAME Nerd Font installed successfully!${NC}"
-	else
-		echo -e "${RED}❌ Failed to download font.${NC}"
-		rm -rf "$TMP_DIR"
-		exit 1
+	if ! matched=$(fc-match --format='%{family[0]}' "$expected" 2>/dev/null); then
+		die "fc-match failed for font family: $expected"
 	fi
+	[[ "$matched" == "$expected" ]] ||
+		die "Font family '$expected' is unavailable; fc-match returned '$matched'."
+	print_success "Font family verified: $expected"
+}
 
-	# Cleanup
-	rm -rf "$TMP_DIR"
+print_section 'Font verification'
+verify_font_family 'JetBrainsMono Nerd Font'
+verify_font_family 'Inter'
+
+if ! pacman -Qq bibata-cursor-theme >/dev/null 2>&1; then
+	die 'AUR package bibata-cursor-theme is required for Bibata-Modern-Ice cursors.'
 fi
-
-echo -e "\n${BLUE}========================================${NC}"
-echo -e "${GREEN}✅ Font setup complete!${NC}"
-echo -e "${YELLOW}Note: Configure your terminal emulator to use '$FONT_NAME Nerd Font'${NC}"
-echo -e "${BLUE}========================================${NC}"
+[[ -d $CURSOR_DIR ]] || die "Bibata-Modern-Ice cursor directory not found: $CURSOR_DIR"
+print_success "Cursor directory verified: $CURSOR_DIR"
+print_success 'Font verification complete.'

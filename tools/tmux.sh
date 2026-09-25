@@ -1,52 +1,52 @@
 #!/usr/bin/env bash
 
-# ==========================================
-# Tmux Verification Script
-# Verifies Tmux installation
-# Configuration is handled by dotfiles
-# ==========================================
+set -Eeuo pipefail
 
-set -e
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../lib/common.sh"
 
-# Color codes for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+require_non_root
+require_commands git tmux mkdir mktemp mv rm
 
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Tmux Verification${NC}"
-echo -e "${BLUE}========================================${NC}"
+TPM_ROOT="$HOME/.config/tmux/plugins"
+TPM_DIR="$TPM_ROOT/tpm"
+TPM_URL='https://github.com/tmux-plugins/tpm'
+TEMP_DIR=
 
-# ==========================================
-# VERIFY INSTALLATION
-# ==========================================
-echo -e "\n${BLUE}Verifying Tmux installation...${NC}"
-
-if command -v tmux &>/dev/null; then
-	TMUX_PATH=$(command -v tmux)
-	TMUX_VER=$(tmux -V)
-	echo -e "${GREEN}✅ Tmux found at: $TMUX_PATH${NC}"
-	echo -e "${GREEN}✅ $TMUX_VER${NC}"
-
-	# NEW: Check for Tmux Plugin Manager (TPM)
-	echo -e "\n${BLUE}Verifying dependencies...${NC}"
-	TPM_DIR="$HOME/.config/tmux/plugins/tpm"
-	if [ -d "$TPM_DIR" ]; then
-		echo -e "${GREEN}✅ TPM (Tmux Plugin Manager): installed${NC}"
-	else
-		echo -e "${YELLOW}⚠️  TPM not found. Installing to $TPM_DIR...${NC}"
-		mkdir -p "$HOME/.config/tmux/plugins"
-		git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"
-		echo -e "${GREEN}✅ TPM installed successfully!${NC}"
+cleanup() {
+	if [[ -n ${TEMP_DIR:-} ]]; then
+		rm -rf -- "$TEMP_DIR"
 	fi
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
-	echo -e "\n${BLUE}========================================${NC}"
-	echo -e "${GREEN}✅ Tmux setup verified!${NC}"
-	echo -e "${BLUE}Configuration (.tmux.conf) is managed by dotfiles${NC}"
-	echo -e "${BLUE}========================================${NC}"
+print_section 'Tmux and TPM setup'
+verify_command tmux -V
+verify_command git --version
+
+if [[ -e $TPM_DIR || -L $TPM_DIR ]]; then
+	[[ -d $TPM_DIR ]] || die "The TPM path is not a directory: $TPM_DIR"
 else
-	echo -e "${RED}❌ Tmux not found. Please install it via pacman first.${NC}"
-	exit 1
+	if ! mkdir -p "$TPM_ROOT"; then
+		die "Unable to create the TPM parent directory: $TPM_ROOT"
+	fi
+	TEMP_DIR=$(mktemp -d "$TPM_ROOT/.tpm.XXXXXX")
+	print_status "Cloning TPM into $TEMP_DIR"
+	if ! git clone --depth 1 "$TPM_URL" "$TEMP_DIR"; then
+		die 'Failed to clone TPM.'
+	fi
+	[[ -f $TEMP_DIR/scripts/install_plugins.sh ]] ||
+		die 'Cloned TPM is incomplete; missing scripts/install_plugins.sh.'
+	if ! mv -T -- "$TEMP_DIR" "$TPM_DIR"; then
+		die 'Failed to install the cloned TPM directory.'
+	fi
+	TEMP_DIR=
 fi
+
+INSTALL_SCRIPT="$TPM_DIR/scripts/install_plugins.sh"
+[[ -f $INSTALL_SCRIPT ]] || die "TPM is incomplete; missing $INSTALL_SCRIPT"
+print_success 'TPM is available. Plugin installation runs after Stow.'
